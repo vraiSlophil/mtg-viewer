@@ -3,7 +3,7 @@ install:
 	@cp .env.example .env
 	@docker compose pull
 	@docker compose build
-	@docker compose run --rm php composer install
+	@docker compose run --rm php  composer install
 	@docker compose run --rm vite npm install
 	@docker compose run --rm --remove-orphans php bin/console doctrine:migrations:migrate --no-interaction
 

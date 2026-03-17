@@ -25,10 +25,9 @@ class ImportCardCommand extends Command
 {
     public function __construct(
         private readonly EntityManagerInterface $entityManager,
-        private readonly LoggerInterface        $logger,
-        private array                           $csvHeader = []
-    )
-    {
+        private readonly LoggerInterface $logger,
+        private array $csvHeader = []
+    ) {
         parent::__construct();
     }
 
@@ -57,6 +56,11 @@ class ImportCardCommand extends Command
         $progressIndicator->start('Importing cards...');
 
         while (($row = $this->readCSV($handle)) !== false) {
+
+            if (empty($row)) {
+                continue;
+            }
+
             $i++;
 
             if (!in_array($row['uuid'], $uuidInDatabase)) {
@@ -87,6 +91,10 @@ class ImportCardCommand extends Command
         $row = fgetcsv($handle);
         if ($row === false) {
             return false;
+        }
+        if (count($row) !== count($this->csvHeader)) {
+            $this->logger->warning('Skipping row with invalid column count: ' . implode(',', $row));
+            return [];
         }
         return array_combine($this->csvHeader, $row);
     }

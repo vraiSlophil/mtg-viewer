@@ -2,13 +2,13 @@
 
 namespace App\Controller;
 
-use App\Entity\Artist;
 use App\Entity\Card;
 use Doctrine\ORM\EntityManagerInterface;
 use Psr\Log\LoggerInterface;
-use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
-use Symfony\Component\HttpFoundation\Response;
 use OpenApi\Attributes as OA;
+use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
+use Symfony\Component\HttpFoundation\Request;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Annotation\Route;
 
 #[Route('/api/card', name: 'api_card_')]
@@ -20,18 +20,27 @@ class ApiCardController extends AbstractController
         private readonly LoggerInterface $logger
     ) {
     }
-    #[Route('/all', name: 'List all cards', methods: ['GET'])]
-    #[OA\Put(description: 'Return all cards in the database')]
-    #[OA\Response(response: 200, description: 'List all cards')]
-    public function cardAll(): Response
+
+    #[Route('', name: 'List cards', methods: ['GET'])]
+    #[OA\Parameter(name: 'name', description: 'Name of the card', in: 'query', required: false, schema: new OA\Schema(type: 'string'))]
+    #[OA\Get(description: 'Return a list of cards with an optional name filter')]
+    #[OA\Response(response: 200, description: 'List cards')]
+    public function cardList(Request $request): Response
     {
-        $cards = $this->entityManager->getRepository(Card::class)->findAll();
+        $name = $request->query->getString('name', '');
+
+        if ($name) {
+            $cards = $this->entityManager->getRepository(Card::class)->findByName($name);
+        } else {
+            $cards = $this->entityManager->getRepository(Card::class)->findAll();
+        }
+
         return $this->json($cards);
     }
 
     #[Route('/{uuid}', name: 'Show card', methods: ['GET'])]
-    #[OA\Parameter(name: 'uuid', description: 'UUID of the card', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))]
-    #[OA\Put(description: 'Get a card by UUID')]
+    #[OA\Parameter(name: 'uuid', description: 'UUID of the card', in: 'path', required: true, schema: new OA\Schema(type: 'string'))]
+    #[OA\Get(description: 'Get a card by UUID')]
     #[OA\Response(response: 200, description: 'Show card')]
     #[OA\Response(response: 404, description: 'Card not found')]
     public function cardShow(string $uuid): Response

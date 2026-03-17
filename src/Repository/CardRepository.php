@@ -15,6 +15,7 @@ use Doctrine\Persistence\ManagerRegistry;
  * @method Card|null findOneBy(array $criteria, array $orderBy = null)
  * @method Card[]    findAll()
  * @method Card[]    findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null)
+ * @method Card[]    findByName(string $name)
  */
 class CardRepository extends ServiceEntityRepository
 {
@@ -25,11 +26,31 @@ class CardRepository extends ServiceEntityRepository
 
     public function getAllUuids(): array
     {
-        $result =  $this->createQueryBuilder('c')
+        $result = $this->createQueryBuilder('c')
             ->select('c.uuid')
             ->getQuery()
             ->getResult(AbstractQuery::HYDRATE_ARRAY)
         ;
         return array_column($result, 'uuid');
+    }
+
+    public function findByName(string $name): array
+    {
+        return $this->createQueryBuilder('c')
+            ->where('c.name LIKE :name')
+            ->setParameter('name', '%' . $name . '%')
+            ->getQuery()
+            ->getResult()
+        ;
+    }
+
+    public function getSetCodes(): array
+    {
+        $result = $this->createQueryBuilder('c')
+            ->select('DISTINCT c.setCode')
+            ->getQuery()
+            ->getResult(AbstractQuery::HYDRATE_ARRAY)
+        ;
+        return array_column($result, 'setCode');
     }
 }
