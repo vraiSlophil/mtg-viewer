@@ -1,11 +1,4 @@
-export async function fetchAllCards() {
-    const response = await fetch('/api/card');
-    if (!response.ok) throw new Error('Failed to fetch cards');
-    const result = await response.json();
-    return result;
-}
-
-export async function searchCards(filters = {}) {
+function buildCardCollectionQuery(filters = {}) {
     const params = new URLSearchParams();
 
     if (filters.name) {
@@ -16,7 +9,28 @@ export async function searchCards(filters = {}) {
         params.set('setCode', filters.setCode);
     }
 
-    const queryString = params.toString();
+    if (typeof filters.offset === 'number' && filters.offset > 0) {
+        params.set('offset', filters.offset.toString());
+    }
+
+    if (typeof filters.limit === 'number' && filters.limit > 0) {
+        params.set('limit', filters.limit.toString());
+    }
+
+    return params.toString();
+}
+
+export async function fetchAllCards(filters = {}) {
+    const queryString = buildCardCollectionQuery(filters);
+    const response = await fetch(`/api/card${queryString ? `?${queryString}` : ''}`);
+
+    if (!response.ok) throw new Error('Failed to fetch cards');
+
+    return response.json();
+}
+
+export async function searchCards(filters = {}) {
+    const queryString = buildCardCollectionQuery(filters);
     const response = await fetch(`/api/card${queryString ? `?${queryString}` : ''}`);
 
     if (!response.ok) throw new Error('Failed to search cards');
