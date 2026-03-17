@@ -5,17 +5,29 @@ export async function fetchAllCards() {
     return result;
 }
 
-export async function searchCardsByName(name) {
+export async function searchCards(filters = {}) {
     const params = new URLSearchParams();
 
-    if (name) {
-        params.set('name', name);
+    if (filters.name) {
+        params.set('name', filters.name);
+    }
+
+    if (filters.setCode) {
+        params.set('setCode', filters.setCode);
     }
 
     const queryString = params.toString();
     const response = await fetch(`/api/card${queryString ? `?${queryString}` : ''}`);
 
     if (!response.ok) throw new Error('Failed to search cards');
+
+    return response.json();
+}
+
+export async function fetchSetCodes() {
+    const response = await fetch('/api/card/set-codes');
+
+    if (!response.ok) throw new Error('Failed to fetch set codes');
 
     return response.json();
 }

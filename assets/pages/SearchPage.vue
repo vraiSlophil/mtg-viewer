@@ -1,23 +1,51 @@
 <script setup>
 import { onMounted, ref, watch } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
-import { searchCardsByName } from '../services/cardService';
+import { fetchSetCodes, searchCards } from '../services/cardService';
 
 const route = useRoute();
 const router = useRouter();
 
 const searchTerm = ref('');
+const selectedSetCode = ref('');
+const setCodes = ref([]);
 const cards = ref([]);
 const loadingCards = ref(false);
+const loadingSetCodes = ref(false);
 const errorMessage = ref('');
 const hasSearched = ref(false);
 
-async function searchCards(name) {
+async function loadSetCodes() {
+    loadingSetCodes.value = true;
+
+    try {
+        setCodes.value = await fetchSetCodes();
+    } catch (error) {
+        errorMessage.value = 'Le chargement des extensions a échoué.';
+    } finally {
+        loadingSetCodes.value = false;
+    }
+}
+
+async function loadCards() {
+    const trimmedSearch = searchTerm.value.trim();
+    const setCode = selectedSetCode.value;
+
+    if (!setCode && trimmedSearch.length > 0 && trimmedSearch.length < 3) {
+        errorMessage.value = 'Veuillez entrer au moins 3 caractères pour la recherche.';
+        cards.value = [];
+        hasSearched.value = false;
+        return;
+    }
+
     loadingCards.value = true;
     errorMessage.value = '';
 
     try {
-        cards.value = await searchCardsByName(name);
+        cards.value = await searchCards({
+            name: trimmedSearch,
+            setCode,
+        });
         hasSearched.value = true;
     } catch (error) {
         cards.value = [];
@@ -28,49 +56,55 @@ async function searchCards(name) {
     }
 }
 
-async function submitSearch() {
+async function syncRouteAndSearch() {
     const trimmedSearch = searchTerm.value.trim();
+    const setCode = selectedSetCode.value;
 
-    if (trimmedSearch.length < 3) {
-        errorMessage.value = 'Veuillez entrer au moins 3 caractères pour la recherche.';
-        cards.value = [];
-        hasSearched.value = false;
-        return;
+    const query = {};
+    if (trimmedSearch) {
+        query.name = trimmedSearch;
+    }
+    if (setCode) {
+        query.setCode = setCode;
     }
 
     await router.replace({
         name: 'search-cards',
-        query: trimmedSearch ? { name: trimmedSearch } : {},
+        query,
     });
 
-    await searchCards(trimmedSearch);
+    await loadCards();
 }
 
 let debounceTimeout = null;
-watch(searchTerm, () => {
+watch([searchTerm, selectedSetCode], () => {
     clearTimeout(debounceTimeout);
     debounceTimeout = setTimeout(() => {
-        submitSearch();
+        syncRouteAndSearch();
     }, 500);
 });
 
 onMounted(async () => {
+    await loadSetCodes();
+
     const initialName = typeof route.query.name === 'string' ? route.query.name : '';
+    const initialSetCode = typeof route.query.setCode === 'string' ? route.query.setCode : '';
 
     searchTerm.value = initialName;
+    selectedSetCode.value = initialSetCode;
 
-    if (!initialName) {
+    if (!initialName && !initialSetCode) {
         return;
     }
 
-    await searchCards(initialName);
+    await loadCards();
 });
 </script>
 
 <template>
     <div class="search-page">
         <h1>Rechercher une Carte</h1>
-        <form class="search-form" @submit.prevent="submitSearch">
+        <form class="search-form" @submit.prevent="syncRouteAndSearch">
             <label class="search-form-label" for="card-name">Nom de la carte</label>
             <input
                 id="card-name"
@@ -79,6 +113,21 @@ onMounted(async () => {
                 type="search"
                 name="name"
                 placeholder="Ex: Lightning Bolt">
+            <label class="search-form-label" for="card-set-code">Extension</label>
+            <select
+                id="card-set-code"
+                v-model="selectedSetCode"
+                class="search-form-select"
+                name="setCode"
+                :disabled="loadingSetCodes">
+                <option value="">Toutes les extensions</option>
+                <option
+                    v-for="setCode in setCodes"
+                    :key="setCode"
+                    :value="setCode">
+                    {{ setCode }}
+                </option>
+            </select>
             <button class="search-form-submit" type="submit">Rechercher</button>
         </form>
     </div>
@@ -116,6 +165,11 @@ onMounted(async () => {
 
 .search-form-input {
     min-width: 280px;
+    padding: 10px 12px;
+}
+
+.search-form-select {
+    min-width: 200px;
     padding: 10px 12px;
 }
 

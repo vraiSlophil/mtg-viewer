@@ -34,14 +34,35 @@ class CardRepository extends ServiceEntityRepository
         return array_column($result, 'uuid');
     }
 
-    public function findByName(string $name): array
+    public function findBy(array $criteria, array $orderBy = null, $limit = null, $offset = null): array
     {
-        return $this->createQueryBuilder('c')
-            ->where('c.name LIKE :name')
-            ->setParameter('name', '%' . $name . '%')
-            ->getQuery()
-            ->getResult()
-        ;
+        $qb = $this->createQueryBuilder('c');
+
+        if (isset($criteria['name'])) {
+            $qb->where('c.name LIKE :name')
+                ->setParameter('name', '%' . $criteria['name'] . '%');
+        }
+
+        if (isset($criteria['setCode'])) {
+            $qb->andWhere('c.setCode = :setCode')
+                ->setParameter('setCode', $criteria['setCode']);
+        }
+
+        if ($orderBy) {
+            foreach ($orderBy as $field => $direction) {
+                $qb->addOrderBy('c.' . $field, $direction);
+            }
+        }
+
+        if ($limit) {
+            $qb->setMaxResults($limit);
+        }
+
+        if ($offset) {
+            $qb->setFirstResult($offset);
+        }
+
+        return $qb->getQuery()->getResult();
     }
 
     public function getSetCodes(): array

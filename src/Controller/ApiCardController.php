@@ -23,19 +23,33 @@ class ApiCardController extends AbstractController
 
     #[Route('', name: 'List cards', methods: ['GET'])]
     #[OA\Parameter(name: 'name', description: 'Name of the card', in: 'query', required: false, schema: new OA\Schema(type: 'string'))]
+    #[OA\Parameter(name: 'setCode', description: 'Set code of the card', in: 'query', required: false, schema: new OA\Schema(type: 'string'))]
     #[OA\Get(description: 'Return a list of cards with an optional name filter')]
     #[OA\Response(response: 200, description: 'List cards')]
     public function cardList(Request $request): Response
     {
         $name = $request->query->getString('name', '');
+        $setCode = $request->query->getString('setCode', '');
 
-        if ($name) {
-            $cards = $this->entityManager->getRepository(Card::class)->findByName($name);
+        if ($name || $setCode) {
+            $cards = $this->entityManager->getRepository(Card::class)->findBy(array_filter([
+                'name' => $name,
+                'setCode' => $setCode
+            ]));
         } else {
             $cards = $this->entityManager->getRepository(Card::class)->findAll();
         }
 
         return $this->json($cards);
+    }
+
+    #[Route('/set-codes', name: 'Show set codes', methods: ['GET'])]
+    #[OA\Get(description: 'Get all unique set codes')]
+    #[OA\Response(response: 200, description: 'Show set codes')]
+    public function cardShowSetCodes(): Response
+    {
+        $setCodes = $this->entityManager->getRepository(Card::class)->getSetCodes();
+        return $this->json($setCodes);
     }
 
     #[Route('/{uuid}', name: 'Show card', methods: ['GET'])]
